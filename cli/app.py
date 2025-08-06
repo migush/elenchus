@@ -1,0 +1,70 @@
+"""
+Main CLI application for Elenchus.
+"""
+
+import sys
+import typer
+from typer.main import get_command, get_command_name
+
+from __init__ import __version__
+
+# Import command functions
+from .commands.extract import extract
+from .commands.generate import generate_tests
+from .commands.run_phase import run_phase
+from .commands.config import config_cmd
+from .commands.info import info
+
+
+def version_callback(value: bool):
+    if value:
+        typer.echo(f"Elenchus CLI v{__version__}")
+        raise typer.Exit()
+
+
+app = typer.Typer(
+    name="elenchus",
+    help="HumanEval test generation framework",
+    add_completion=False,
+    no_args_is_help=True,
+)
+
+
+# Add global --version / -V option
+@app.callback()
+def main(
+    version: bool = typer.Option(
+        None,
+        "--version",
+        "-V",
+        help="Show version information and exit.",
+        callback=version_callback,
+        is_eager=True,
+    ),
+):
+    pass
+
+
+# Register commands
+app.command(name="extract")(extract)
+app.command(name="generate-tests")(generate_tests)
+app.command(name="run-phase")(run_phase)
+app.command(name="config")(config_cmd)
+app.command(name="info")(info)
+
+
+def run_app():
+    """Run the CLI application with proper help handling."""
+    # Get all available commands and options dynamically
+    command = get_command(app)
+    available_commands = [get_command_name(key) for key in command.commands.keys()]
+
+    # Check if the first argument is a global option (starts with -)
+    is_global_option = len(sys.argv) > 1 and sys.argv[1].startswith("-")
+
+    # Only insert --help if no command is provided and it's not a global option
+    if len(sys.argv) == 1 or (
+        not is_global_option and sys.argv[1] not in available_commands
+    ):
+        sys.argv.insert(1, "--help")
+    app()
