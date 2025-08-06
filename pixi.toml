@@ -1,0 +1,15 @@
+[workspace]
+authors = ["Miroslav Georgiev <miro.georgiev@gmail.com>"]
+channels = ["conda-forge"]
+name = "elenchus"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = ">=3.13.5,<3.14"
+requests = ">=2.32.4,<3"
+debugpy = ">=1.8.15,<2"
+typer = ">=0.16.0,<0.17"
+importlib-metadata = ">=8.7.0,<9"
