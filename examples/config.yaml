@@ -1,0 +1,19 @@
+# Elenchus Configuration Example
+# Copy this file to ~/.elenchus/config.yaml and customize as needed
+
+# HumanEval dataset configuration
+human_eval_url: "https://raw.githubusercontent.com/openai/human-eval/master/data/HumanEval.jsonl.gz"
+output_dir: "generated_tests"
+max_iterations: 5
+
+# LLM configuration
+llm_model: "gpt-4"
+llm_api_key: null  # Set your API key here or use environment variable ELENCHUS_LLM_API_KEY
+llm_temperature: 0.1
+llm_max_tokens: 2000
+llm_provider: "openai"
+llm_base_url: null  # For custom endpoints (e.g., Azure OpenAI)
+
+# Logging configuration
+log_level: "INFO"
+log_file: null  # Set to a file path to enable file logging 

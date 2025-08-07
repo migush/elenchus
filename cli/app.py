@@ -12,7 +12,9 @@ from .commands.extract import extract
 from .commands.generate import generate_tests
 from .commands.run_phase import run_phase
 from .commands.config import config_cmd
+from .commands.set_config import set_config_cmd
 from .commands.info import info
+from .commands.test_config import test_config_cmd
 
 
 def version_callback(value: bool):
@@ -49,7 +51,9 @@ app.command(name="extract")(extract)
 app.command(name="generate-tests")(generate_tests)
 app.command(name="run-phase")(run_phase)
 app.command(name="config")(config_cmd)
+app.command(name="set-config")(set_config_cmd)
 app.command(name="info")(info)
+app.command(name="test-config")(test_config_cmd)
 
 
 def run_app():
