@@ -55,16 +55,7 @@ app.command(name="info")(info)
 
 def run_app():
     """Run the CLI application with proper help handling."""
-    # Get all available commands and options dynamically
-    command = get_command(app)
-    available_commands = [get_command_name(key) for key in command.commands.keys()]
 
-    # Check if the first argument is a global option (starts with -)
-    is_global_option = len(sys.argv) > 1 and sys.argv[1].startswith("-")
-
-    # Only insert --help if no command is provided and it's not a global option
-    if len(sys.argv) == 1 or (
-        not is_global_option and sys.argv[1] not in available_commands
-    ):
+    if len(sys.argv) == 1:
         sys.argv.insert(1, "--help")
     app()
