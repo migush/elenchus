@@ -4,7 +4,6 @@ Main CLI application for Elenchus.
 
 import sys
 import typer
-from typer.main import get_command, get_command_name
 
 from __init__ import __version__
 
