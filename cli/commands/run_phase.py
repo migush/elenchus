@@ -30,7 +30,7 @@ def run_phase(
         llm_api_key = config.get("llm_api_key")
         if not llm_api_key:
             typer.echo("❌ LLM API key not configured!")
-            typer.echo("Set it with: elenchus config --set-llm-api-key <your-key>")
+            typer.echo("Set it with: elenchus set-config llm_api_key <your-key>")
             typer.echo("Or use environment variable: ELENCHUS_LLM_API_KEY")
             raise typer.Exit(1)
 

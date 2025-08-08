@@ -3,7 +3,6 @@ Configuration management command for showing and editing configuration.
 """
 
 import typer
-from typing import Optional
 
 from config.manager import config
 
@@ -82,7 +81,6 @@ def show_help():
 
     # Dynamically generate set options from schema
     for field_name, info in schema_info.items():
-        env_var = info["env_var"]
         description = info["description"]
         field_type = info["type"]
 
@@ -104,8 +102,8 @@ def show_help():
     typer.echo()
     typer.echo("Examples:")
     typer.echo("  elenchus config --show")
-    typer.echo("  elenchus config --set-llm-api-key sk-...")
-    typer.echo("  elenchus config --set-llm-temperature 0.2")
+    typer.echo("  elenchus set-config llm_api_key sk-...")
+    typer.echo("  elenchus set-config llm_temperature 0.2")
     typer.echo("  elenchus config --export > .env")
     typer.echo("  elenchus config --schema")
 
@@ -171,10 +169,9 @@ def generate_set_commands():
 
     for field_name, field_info in schema_info.items():
         # Create the set command
-        set_cmd = create_set_command(field_name, field_info)
+        create_set_command(field_name, field_info)
 
         # Register it as a subcommand
-        option_name = f"set-{field_name.replace('_', '-')}"
         help_text = f"Set {field_info['description']}"
 
         # Add type hints to help text

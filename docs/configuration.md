@@ -51,7 +51,7 @@ You can set configuration values using environment variables. This is especially
 | `ELENCHUS_LLM_API_KEY` | `llm_api_key` | LLM API key (recommended to use env var) |
 | `ELENCHUS_LLM_TEMPERATURE` | `llm_temperature` | LLM temperature (0.0-2.0) |
 | `ELENCHUS_LLM_MAX_TOKENS` | `llm_max_tokens` | Maximum tokens for LLM responses |
-| `ELENCHUS_LLM_PROVIDER` | `llm_provider` | LLM provider (openai, azure, local, etc.) |
+| `ELENCHUS_LLM_PROVIDER` | `llm_provider` | LLM provider (openai, azure, ollama, etc.) |
 | `ELENCHUS_LLM_BASE_URL` | `llm_base_url` | Custom LLM endpoint URL |
 | `ELENCHUS_LOG_LEVEL` | `log_level` | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) |
 | `ELENCHUS_LOG_FILE` | `log_file` | Log file path |
@@ -74,6 +74,78 @@ ELENCHUS_MAX_ITERATIONS=10
 # Logging
 ELENCHUS_LOG_LEVEL=INFO
 ```
+
+### Using Different LLM Providers
+
+Elenchus uses LiteLLM directly for provider-agnostic LLM access. You can use any supported provider by setting the appropriate model name and API key:
+
+#### OpenAI
+```bash
+export ELENCHUS_LLM_MODEL=gpt-4
+export ELENCHUS_LLM_API_KEY=sk-your-openai-key
+```
+
+#### Anthropic Claude
+```bash
+export ELENCHUS_LLM_MODEL=claude-3-sonnet-20240229
+export ELENCHUS_LLM_API_KEY=sk-ant-your-anthropic-key
+```
+
+#### Ollama (Local)
+```bash
+export ELENCHUS_LLM_MODEL=ollama/llama3.2:3b
+export ELENCHUS_LLM_BASE_URL=http://localhost:11434
+# No API key needed for local Ollama
+```
+
+#### Azure OpenAI
+```bash
+export ELENCHUS_LLM_MODEL=azure/your-deployment-name
+export ELENCHUS_LLM_API_KEY=your-azure-key
+export ELENCHUS_LLM_BASE_URL=https://your-resource.openai.azure.com
+```
+
+#### HuggingFace
+```bash
+export ELENCHUS_LLM_MODEL=huggingface/meta-llama/Llama-2-7b-chat-hf
+export ELENCHUS_LLM_API_KEY=hf-your-huggingface-key
+export ELENCHUS_LLM_BASE_URL=https://your-endpoint.huggingface.cloud
+```
+
+For a complete list of supported providers and models, see the [LiteLLM documentation](https://docs.litellm.ai/docs/).
+
+### Ollama Setup
+
+To use Ollama as your LLM provider:
+
+1. **Install Ollama**: Follow the instructions at [ollama.ai](https://ollama.ai)
+
+2. **Pull a model**: 
+   ```bash
+   ollama pull llama3.2:3b
+   ```
+
+3. **Configure Elenchus for Ollama**:
+   ```bash
+   # Set the model to use Ollama format
+   pixi run python main.py set-config llm_model ollama/llama3.2:3b
+   
+   # Set the Ollama server URL
+   pixi run python main.py set-config llm_base_url http://localhost:11434
+   ```
+
+4. **Or use environment variables**:
+   ```bash
+   export ELENCHUS_LLM_MODEL=ollama/llama3.2:3b
+   export ELENCHUS_LLM_BASE_URL=http://localhost:11434
+   ```
+
+5. **Test the configuration**:
+   ```bash
+   pixi run python main.py test-config
+   ```
+
+**Note**: No API key is required for local providers like Ollama. Cloud providers (OpenAI, Anthropic, etc.) require API keys.
 
 ## Configuration Commands
 
@@ -105,16 +177,19 @@ pixi run python main.py config --export
 
 ```bash
 # Set LLM API key
-pixi run python main.py config --set-llm-api-key sk-your-api-key-here
+pixi run python main.py set-config llm_api_key sk-your-api-key-here
+
+# Set LLM model
+pixi run python main.py set-config llm_model gpt-4
 
 # Set LLM temperature
-pixi run python main.py config --set-llm-temperature 0.2
+pixi run python main.py set-config llm_temperature 0.2
 
 # Set output directory
-pixi run python main.py config --set-output-dir ./custom_tests
+pixi run python main.py set-config output_dir ./custom_tests
 
 # Set max iterations
-pixi run python main.py config --set-max-iterations 10
+pixi run python main.py set-config max_iterations 10
 ```
 
 ### Reset to Defaults
@@ -219,7 +294,7 @@ The following validation rules are applied to configuration values:
 
 1. Set your API key:
    ```bash
-   pixi run python main.py config --set-llm-api-key sk-your-key-here
+   pixi run python main.py set-config llm_api_key sk-your-key-here
    ```
 
 2. Verify configuration:

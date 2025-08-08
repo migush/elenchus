@@ -34,7 +34,11 @@ def test_config_cmd():
     typer.echo("\n3. Environment Variables Test")
     typer.echo("-" * 30)
     env_vars_found = False
-    for env_var, config_key in config.ENV_MAPPING.items():
+    from config.schema import get_env_mapping
+
+    env_mapping = get_env_mapping()
+
+    for env_var, config_key in env_mapping.items():
         value = config.env_config.get(config_key)
         if value is not None:
             if not env_vars_found:
@@ -55,24 +59,48 @@ def test_config_cmd():
     typer.echo("-" * 30)
     llm_api_key = config.get("llm_api_key")
     llm_model = config.get("llm_model")
-    llm_provider = config.get("llm_provider")
 
-    if llm_api_key:
-        typer.echo(f"✅ LLM API key configured (provider: {llm_provider})")
+    # Check if we need an API key for this provider
+    # Local providers typically don't need API keys
+    local_providers = ["ollama/", "local/", "huggingface/"]
+    needs_api_key = not any(
+        llm_model and llm_model.startswith(provider) for provider in local_providers
+    )
+
+    if llm_api_key or not needs_api_key:
+        if llm_api_key:
+            typer.echo("✅ LLM API key configured")
+        else:
+            typer.echo(f"✅ No API key needed for {llm_model}")
         typer.echo(f"✅ LLM model: {llm_model}")
 
-        # Test 5: LLM Connectivity Test (if API key available)
+        # Test 5: LLM Connectivity Test
         typer.echo("\n5. LLM Connectivity Test")
         typer.echo("-" * 30)
         try:
-            # TODO: Implement actual LLM connectivity test when LLM integration is added
-            typer.echo("ℹ️  LLM connectivity test not yet implemented")
-            typer.echo("   (Will be available when LLM integration is added)")
+            import sys
+            from pathlib import Path
+
+            # Add the project root to the Python path
+            project_root = Path(__file__).parent.parent.parent
+            sys.path.insert(0, str(project_root))
+
+            from core.llm import test_llm_connection
+
+            # Get configuration with CLI args taking priority
+            final_config = config.get_config_with_priority()
+
+            if test_llm_connection(final_config):
+                typer.echo("✅ LLM connectivity test passed")
+            else:
+                typer.echo("❌ LLM connectivity test failed")
+        except ImportError:
+            typer.echo("ℹ️  LLM integration not available (LiteLLM not installed)")
         except Exception as e:
             typer.echo(f"❌ LLM connectivity test failed: {e}")
     else:
         typer.echo("⚠️  LLM API key not configured")
-        typer.echo("   Set it with: elenchus config --set-llm-api-key <your-key>")
+        typer.echo("   Set it with: elenchus set-config llm_api_key <your-key>")
         typer.echo("   Or use environment variable: ELENCHUS_LLM_API_KEY")
 
     # Test 6: File System Test
@@ -117,7 +145,7 @@ def test_config_cmd():
     typer.echo("=" * 50)
     typer.echo("✅ Configuration system is working correctly")
 
-    if llm_api_key:
+    if llm_api_key or not needs_api_key:
         typer.echo("✅ LLM configuration is ready")
         typer.echo("   You can now use LLM-dependent commands")
     else:
@@ -127,4 +155,4 @@ def test_config_cmd():
     typer.echo("\nNext steps:")
     typer.echo("  - Run 'elenchus config --show' to see current settings")
     typer.echo("  - Run 'elenchus config --export' to see environment variables")
-    typer.echo("  - Set LLM API key: elenchus config --set-llm-api-key <key>")
+    typer.echo("  - Set LLM API key: elenchus set-config llm_api_key <key>")

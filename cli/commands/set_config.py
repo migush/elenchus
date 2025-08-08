@@ -3,7 +3,6 @@ Dynamic configuration set command.
 """
 
 import typer
-from typing import Optional
 
 from config.manager import config
 from config.schema import get_field_metadata

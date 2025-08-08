@@ -2,7 +2,6 @@
 Configuration validation using schema-driven rules.
 """
 
-import os
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
 from .schema import get_validation_rules, LogLevel

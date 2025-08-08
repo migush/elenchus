@@ -8,7 +8,6 @@ import requests
 import gzip
 import json
 from typing import Optional, Iterable, Dict
-import typer
 
 from config.manager import config
 
