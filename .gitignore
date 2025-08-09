@@ -215,3 +215,5 @@ __marimo__/
 
 # HumanEval dataset
 HumanEval/
+# Generated outputs
+/generated_tests/

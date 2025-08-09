@@ -17,6 +17,12 @@ def generate_tests(
         "-i",
         help="Input directory containing extracted PUTs",
     ),
+    file: Optional[str] = typer.Option(
+        None,
+        "--file",
+        "-f",
+        help="Path to a specific PUT file (e.g., HumanEval/he_0.py)",
+    ),
     output_dir: Optional[str] = typer.Option(
         None,
         "--output-dir",
@@ -28,6 +34,22 @@ def generate_tests(
         "--max-iterations",
         "-m",
         help="Maximum number of test generation iterations",
+    ),
+    run: bool = typer.Option(
+        False,
+        "--run",
+        help="Run each generated test with pytest and report pass/fail",
+    ),
+    limit: Optional[int] = typer.Option(
+        None,
+        "--limit",
+        "-n",
+        help="Process only the first N PUTs",
+    ),
+    coverage: bool = typer.Option(
+        False,
+        "--coverage",
+        help="Measure coverage for the target module using pytest-cov",
     ),
 ):
     """Generate tests for extracted PUTs using LLM."""
@@ -72,22 +94,35 @@ def generate_tests(
     typer.echo(f"Using LLM model: {final_config.get('llm_model')}")
     typer.echo(f"LLM temperature: {final_config.get('llm_temperature')}")
 
-    # Get all PUT IDs from the input directory
-    put_ids = get_all_put_ids(input_dir)
-
-    if not put_ids:
-        typer.echo(f"❌ No PUT files found in {input_dir}")
-        raise typer.Exit(1)
-
-    typer.echo(f"Found {len(put_ids)} PUT files to process")
+    # Determine targets: either a single file or a directory listing
+    if file:
+        file_path = Path(file)
+        if not file_path.exists() or not file_path.is_file():
+            typer.echo(f"❌ File not found: {file}")
+            raise typer.Exit(1)
+        # For a specific file, derive put_id and human_eval_dir from the path
+        put_ids = [file_path.stem]
+        input_dir = str(file_path.parent)
+        typer.echo(f"Processing single file: {file} (put_id: {put_ids[0]})")
+    else:
+        # Get all PUT IDs from the input directory
+        put_ids = get_all_put_ids(input_dir)
+        if not put_ids:
+            typer.echo(f"❌ No PUT files found in {input_dir}")
+            raise typer.Exit(1)
+        if limit is not None and limit > 0:
+            put_ids = put_ids[:limit]
+        typer.echo(f"Found {len(put_ids)} PUT files to process")
 
     # Create output directory structure
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    # Create logs directory
+    # Create logs and tests directories
     logs_dir = output_path / "logs"
     logs_dir.mkdir(exist_ok=True)
+    tests_dir = output_path / "tests"
+    tests_dir.mkdir(exist_ok=True)
 
     # Process each PUT
     successful = 0
@@ -97,13 +132,40 @@ def generate_tests(
         typer.echo(f"\n[{i}/{len(put_ids)}] Processing {put_id}...")
 
         try:
-            result = generate_test_for_put(put_id, final_config, str(logs_dir))
+            result = generate_test_for_put(
+                put_id,
+                final_config,
+                log_dir=str(logs_dir),
+                human_eval_dir=input_dir,
+                tests_dir=str(tests_dir),
+                run=run,
+                measure_coverage=coverage,
+            )
 
             if result["success"]:
-                typer.echo(f"✅ {put_id}: Success (log: {result['log_file']})")
+                syntax_status = "OK" if result.get("syntax_ok") else "FAIL"
+                run_suffix = ""
+                if result.get("ran"):
+                    run_suffix = f"; run: {'PASS' if result.get('passed') else 'FAIL'}"
+                    if coverage and result.get("coverage_percent") is not None:
+                        run_suffix += f"; cov: {result['coverage_percent']}%"
+                typer.echo(
+                    f"✅ {put_id}: Success (syntax: {syntax_status}{run_suffix})\n   test: {result.get('test_file')}\n   log:  {result.get('log_file')}"
+                )
                 successful += 1
             else:
-                typer.echo(f"❌ {put_id}: Failed - {result['error']}")
+                # Show failure; coverage percent only applies to passing tests.
+                # If coverage is enabled but the test didn't pass, show 'cov: n/a' when a report exists.
+                if coverage:
+                    cov_suffix = ""
+                    if (
+                        result.get("coverage_xml")
+                        and result.get("coverage_percent") is None
+                    ):
+                        cov_suffix = " (cov: n/a)"
+                    typer.echo(f"❌ {put_id}: Failed - {result['error']}{cov_suffix}")
+                else:
+                    typer.echo(f"❌ {put_id}: Failed - {result['error']}")
                 failed += 1
 
         except Exception as e:

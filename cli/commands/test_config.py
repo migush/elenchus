@@ -59,6 +59,7 @@ def test_config_cmd():
     typer.echo("-" * 30)
     llm_api_key = config.get("llm_api_key")
     llm_model = config.get("llm_model")
+    llm_provider = config.get("llm_provider")
 
     # Check if we need an API key for this provider
     # Local providers typically don't need API keys

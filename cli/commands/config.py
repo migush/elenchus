@@ -81,6 +81,7 @@ def show_help():
 
     # Dynamically generate set options from schema
     for field_name, info in schema_info.items():
+        env_var = info["env_var"]
         description = info["description"]
         field_type = info["type"]
 
@@ -169,9 +170,10 @@ def generate_set_commands():
 
     for field_name, field_info in schema_info.items():
         # Create the set command
-        create_set_command(field_name, field_info)
+        set_cmd = create_set_command(field_name, field_info)
 
         # Register it as a subcommand
+        option_name = f"set-{field_name.replace('_', '-')}"
         help_text = f"Set {field_info['description']}"
 
         # Add type hints to help text

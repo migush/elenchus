@@ -307,6 +307,34 @@ The following validation rules are applied to configuration values:
    pixi run python main.py extract
    ```
 
+### Generate Tests
+
+Use the generator with optional execution, coverage, limits, and single-file mode:
+
+```bash
+# Generate tests for the whole HumanEval directory
+pixi run python main.py generate-tests --input-dir HumanEval --output-dir generated_tests
+
+# Run each generated test and print pass/fail
+pixi run python main.py generate-tests --input-dir HumanEval --output-dir generated_tests --run
+
+# Measure line coverage (prints just the percent in CLI when available)
+pixi run python main.py generate-tests --input-dir HumanEval --output-dir generated_tests --run --coverage
+
+# Process only the first N PUTs
+pixi run python main.py generate-tests --input-dir HumanEval --output-dir generated_tests --run --coverage --limit 5
+
+# Process a single file by path
+pixi run python main.py generate-tests --file HumanEval/he_4.py --output-dir generated_tests --run --coverage
+
+# Increase or decrease iteration attempts used for syntax fixes and failing tests
+pixi run python main.py generate-tests --max-iterations 3 --run --coverage -n 3
+```
+
+Notes:
+- Coverage is reported inline in the CLI when tests pass (e.g., `cov: 92.00%`).
+- When coverage is enabled but tests fail or the generated code is invalid, the CLI shows `cov: n/a` to avoid misleading values.
+
 ### Production Setup
 
 1. Create a .env file with your configuration:
