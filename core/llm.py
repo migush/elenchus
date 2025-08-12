@@ -11,15 +11,13 @@ from litellm.exceptions import OpenAIError
 def generate_text(config: Dict[str, Any], prompt: str, **kwargs) -> str:
     """Generate text using LiteLLM directly."""
     try:
-        # Build completion arguments
+        # Build completion arguments - all values must come from config
         completion_kwargs = {
-            "model": config.get("llm_model", "gpt-4"),
+            "model": config["llm_model"],
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": kwargs.get(
-                "temperature", config.get("llm_temperature", 0.1)
-            ),
-            "max_tokens": kwargs.get("max_tokens", config.get("llm_max_tokens", 2000)),
-            "timeout": kwargs.get("timeout", config.get("llm_timeout", 30)),
+            "temperature": kwargs.get("temperature", config["llm_temperature"]),
+            "max_tokens": kwargs.get("max_tokens", config["llm_max_tokens"]),
+            "timeout": kwargs.get("timeout", config["llm_timeout"]),
         }
 
         # Add API key if provided
@@ -50,15 +48,13 @@ def generate_text(config: Dict[str, Any], prompt: str, **kwargs) -> str:
 async def agenerate_text(config: Dict[str, Any], prompt: str, **kwargs) -> str:
     """Generate text asynchronously using LiteLLM directly."""
     try:
-        # Build completion arguments
+        # Build completion arguments - all values must come from config
         completion_kwargs = {
-            "model": config.get("llm_model", "gpt-4"),
+            "model": config["llm_model"],
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": kwargs.get(
-                "temperature", config.get("llm_temperature", 0.1)
-            ),
-            "max_tokens": kwargs.get("max_tokens", config.get("llm_max_tokens", 2000)),
-            "timeout": kwargs.get("timeout", config.get("llm_timeout", 30)),
+            "temperature": kwargs.get("temperature", config["llm_temperature"]),
+            "max_tokens": kwargs.get("max_tokens", config["llm_max_tokens"]),
+            "timeout": kwargs.get("timeout", config["llm_timeout"]),
         }
 
         # Add API key if provided
@@ -91,15 +87,13 @@ def generate_with_messages(
 ) -> str:
     """Generate text using a list of messages."""
     try:
-        # Build completion arguments
+        # Build completion arguments - all values must come from config
         completion_kwargs = {
-            "model": config.get("llm_model", "gpt-4"),
+            "model": config["llm_model"],
             "messages": messages,
-            "temperature": kwargs.get(
-                "temperature", config.get("llm_temperature", 0.1)
-            ),
-            "max_tokens": kwargs.get("max_tokens", config.get("llm_max_tokens", 2000)),
-            "timeout": kwargs.get("timeout", config.get("llm_timeout", 30)),
+            "temperature": kwargs.get("temperature", config["llm_temperature"]),
+            "max_tokens": kwargs.get("max_tokens", config["llm_max_tokens"]),
+            "timeout": kwargs.get("timeout", config["llm_timeout"]),
         }
 
         # Add API key if provided

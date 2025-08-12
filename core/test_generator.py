@@ -16,6 +16,7 @@ import os
 import xml.etree.ElementTree as ET
 
 from .llm import generate_text
+from .experiment_recorder import ExperimentRecorder
 
 
 def read_put_file(put_id: str, human_eval_dir: str = "HumanEval") -> str:
@@ -224,6 +225,8 @@ def generate_test_for_put(
     tests_dir: Optional[str] = None,
     run: bool = False,
     measure_coverage: bool = False,
+    prompt_id: str = "default",
+    experiment_recorder: Optional[ExperimentRecorder] = None,
 ) -> Dict[str, Any]:
     """
     Generate test for a single PUT using LLM.
@@ -261,6 +264,7 @@ def generate_test_for_put(
     }
 
     try:
+        experiment_id: Optional[str] = None
         # Step 1: Read PUT file
         put_source_code = read_put_file(put_id, human_eval_dir)
 
@@ -269,6 +273,17 @@ def generate_test_for_put(
         feedback: Optional[str] = None
         last_log_file: Optional[str] = None
         last_run_log_file: Optional[str] = None
+
+        # Start experiment recording if enabled
+        if experiment_recorder is not None and bool(
+            config.get("track_experiments", True)
+        ):
+            try:
+                experiment_id = experiment_recorder.start_experiment(
+                    put_id, prompt_id, config
+                )
+            except Exception:
+                experiment_id = None
 
         for iteration in range(1, max_iterations + 1):
             # Step 2: Build prompt (with feedback from previous attempt if any)
@@ -291,6 +306,16 @@ def generate_test_for_put(
             # Step 5: Validate syntax
             syntax_ok, syntax_err = is_valid_python_code(test_code)
             result["syntax_ok"] = bool(syntax_ok)
+
+            # Record code generation attempt
+            if experiment_id and experiment_recorder is not None:
+                experiment_recorder.record_code_generation(
+                    experiment_id=experiment_id,
+                    iteration=iteration,
+                    success=bool(syntax_ok),
+                    code=test_code,
+                    response=response,
+                )
 
             # Step 6: Save to tests directory (overwrite latest attempt)
             effective_tests_dir = tests_dir or str(Path(log_dir).parent / "tests")
@@ -327,12 +352,16 @@ def generate_test_for_put(
                         ).resolve()
                     )
 
+                # Measure execution time
+                _run_start = datetime.now()
                 run_info = run_test_file(
                     result["test_file"],
                     human_eval_dir,
                     module_name=put_id,
                     cov_xml_path=cov_xml_path,
                 )
+                _run_end = datetime.now()
+                test_exec_seconds = (_run_end - _run_start).total_seconds()
                 result["ran"] = True
                 result["passed"] = run_info.get("passed", False)
                 result["returncode"] = run_info.get("returncode")
@@ -372,6 +401,17 @@ def generate_test_for_put(
                     f"Output (truncated):\n{_truncate_text(result['run_stdout'], 3000)}\n\n"
                 )
 
+                # Record test generation attempt
+                if experiment_id and experiment_recorder is not None:
+                    coverage_val = result.get("coverage_percent") or 0.0
+                    experiment_recorder.record_test_generation(
+                        experiment_id=experiment_id,
+                        iteration=iteration,
+                        success=bool(result.get("passed", False)),
+                        tests=previous_test_code or "",
+                        coverage=float(coverage_val),
+                    )
+
                 if iteration == max_iterations:
                     # Will exit loop and mark result as not passing
                     break
@@ -389,6 +429,39 @@ def generate_test_for_put(
                     result.get("error")
                     or f"Test did not pass after {max_iterations} attempts (see logs)."
                 )
+
+        # Finalize experiment if recording
+        if experiment_id and experiment_recorder is not None:
+            try:
+                # Estimate test_count by counting pytest-style functions
+                test_code_snapshot = previous_test_code or ""
+                test_count_estimate = len(
+                    re.findall(r"^def\s+test_", test_code_snapshot, re.MULTILINE)
+                )
+
+                final_stats: Dict[str, Any] = {
+                    "code_generation_success": bool(result.get("syntax_ok", False)),
+                    "code_iterations_needed": (
+                        max_iterations if not result.get("syntax_ok") else iteration
+                    ),
+                    "test_generation_success": (
+                        bool(result.get("passed", False))
+                        if run
+                        else bool(result.get("syntax_ok", False))
+                    ),
+                    "test_iterations_needed": iteration,
+                    "test_coverage": float(result.get("coverage_percent") or 0.0),
+                    "test_count": int(test_count_estimate),
+                    "test_execution_time": float(
+                        locals().get("test_exec_seconds", 0.0)
+                    ),
+                    "system_prompt": "",
+                    "user_prompt": result.get("prompt", ""),
+                    "llm_response": result.get("response", ""),
+                }
+                experiment_recorder.finalize_experiment(experiment_id, final_stats)
+            except Exception:
+                pass
 
     except FileNotFoundError as e:
         result["error"] = f"PUT file not found: {e}"
