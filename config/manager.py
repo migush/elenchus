@@ -57,8 +57,8 @@ class Config:
 
     def _load_config(self) -> Dict:
         """Load configuration from file or create default."""
-        # Start with defaults from schema
-        config = get_default_config()
+        # Start with default config to ensure all required fields are present
+        config = self._create_default_config()
 
         # Override with file config if it exists
         if os.path.exists(self.config_file):
@@ -66,16 +66,38 @@ class Config:
                 with open(self.config_file, "r") as f:
                     file_config = yaml.safe_load(f) or {}
                     config.update(file_config)
+                # Save the merged config back to file to ensure all required fields are present
+                self._save_config(config)
             except Exception as e:
                 typer.echo(f"Warning: Could not load config file: {e}")
         else:
-            # Create default config file
+            # Create comprehensive default config file
             self._save_config(config)
 
         # Override with environment variables (highest priority)
         config.update(self.env_config)
 
         return config
+
+    def _create_default_config(self) -> Dict:
+        """Create a comprehensive default configuration."""
+        return {
+            "human_eval_url": "https://raw.githubusercontent.com/openai/human-eval/master/data/HumanEval.jsonl.gz",
+            "output_dir": "generated_tests",
+            "experiments_dir": "experiments",
+            "max_iterations": 5,
+            "llm_model": "gpt-4",
+            "llm_api_key": None,
+            "llm_temperature": 0.1,
+            "llm_max_tokens": 2000,
+            "llm_provider": "openai",
+            "llm_base_url": None,
+            "llm_timeout": 30,
+            "log_level": "INFO",
+            "log_file": None,
+            "default_prompt_id": "default",
+            "track_experiments": True,
+        }
 
     def _save_config(self, config: Dict) -> None:
         """Save configuration to file."""
@@ -147,6 +169,21 @@ class Config:
             typer.echo("❌ Configuration validation failed:")
             for error in errors:
                 typer.echo(f"  - {error}")
+
+            # Provide helpful guidance for missing required fields
+            missing_required = [error for error in errors if "Required field" in error]
+            if missing_required:
+                typer.echo("\n💡 To fix missing required fields:")
+                typer.echo(
+                    "  1. Use 'elenchus set-config <field> <value>' for each missing field"
+                )
+                typer.echo(
+                    "  2. Or set environment variables (see 'elenchus config --env-vars')"
+                )
+                typer.echo(
+                    "  3. Or edit the config file directly: ~/.elenchus/config.yaml"
+                )
+
             return False
 
     def export_env_vars(self) -> None:

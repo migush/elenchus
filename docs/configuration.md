@@ -23,6 +23,11 @@ human_eval_url: "https://raw.githubusercontent.com/openai/human-eval/master/data
 output_dir: "generated_tests"
 max_iterations: 5
 
+# Experiments (CSV storage)
+experiments_dir: "experiments"           # Root folder with results/, prompts/, models/, analysis/
+default_prompt_id: "default"             # Default prompt technique id
+track_experiments: true                   # Append results to CSV files
+
 # LLM configuration
 llm_model: "gpt-4"
 llm_api_key: null  # Set your API key here or use environment variable
@@ -30,6 +35,7 @@ llm_temperature: 0.1
 llm_max_tokens: 2000
 llm_provider: "openai"
 llm_base_url: null  # For custom endpoints
+llm_timeout: 30
 
 # Logging configuration
 log_level: "INFO"
@@ -55,6 +61,10 @@ You can set configuration values using environment variables. This is especially
 | `ELENCHUS_LLM_BASE_URL` | `llm_base_url` | Custom LLM endpoint URL |
 | `ELENCHUS_LOG_LEVEL` | `log_level` | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) |
 | `ELENCHUS_LOG_FILE` | `log_file` | Log file path |
+| `ELENCHUS_EXPERIMENTS_DIR` | `experiments_dir` | Root folder for CSV results |
+| `ELENCHUS_DEFAULT_PROMPT_ID` | `default_prompt_id` | Default prompt technique ID |
+| `ELENCHUS_TRACK_EXPERIMENTS` | `track_experiments` | Enable/disable recording to CSV |
+| `ELENCHUS_LLM_TIMEOUT` | `llm_timeout` | LLM request timeout in seconds |
 
 ### Example .env File
 

@@ -7,15 +7,25 @@ from typing import Dict, Any, List, Tuple
 from .schema import get_validation_rules, LogLevel
 
 
-def validate_config(config: Dict[str, Any]) -> Tuple[bool, List[str]]:
+def validate_config(config: Dict[str, Any]) -> tuple[bool, list[str]]:
     """Validate configuration using schema rules."""
-    errors = []
     rules = get_validation_rules()
+    errors = []
 
-    for field_name, value in config.items():
-        if field_name in rules:
-            field_errors = validate_field(field_name, value, rules[field_name])
-            errors.extend(field_errors)
+    # Check required fields
+    for field_name, rule in rules.items():
+        if rule.get("required", False):
+            if field_name not in config or config[field_name] is None:
+                errors.append(f"Required field '{field_name}' is missing")
+                continue
+
+        # Skip validation if field is not present (optional fields)
+        if field_name not in config or config[field_name] is None:
+            continue
+
+        # Validate field value
+        field_errors = validate_field(field_name, config[field_name], rule)
+        errors.extend(field_errors)
 
     return len(errors) == 0, errors
 

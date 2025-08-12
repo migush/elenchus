@@ -5,6 +5,7 @@ Configuration management command for showing and editing configuration.
 import typer
 
 from config.manager import config
+from config.schema import get_sensitive_fields
 
 
 def config_cmd(
@@ -22,7 +23,7 @@ def config_cmd(
 ):
     """Show or edit configuration."""
     if show:
-        config.show()
+        show_config()
     elif env:
         config.show_env_vars()
     elif validate:
@@ -41,6 +42,37 @@ def config_cmd(
         typer.echo("Configuration reset!")
     else:
         show_help()
+
+
+def show_config():
+    """Show current configuration."""
+    typer.echo("Current configuration:")
+    sensitive_fields = get_sensitive_fields()
+    schema_info = config.get_schema_info()
+
+    for key, value in config.config.items():
+        # Get field metadata
+        field_info = schema_info.get(key, {})
+        required = field_info.get("required", False)
+        required_marker = " [REQUIRED]" if required else " [OPTIONAL]"
+
+        # Mask sensitive values
+        if key in sensitive_fields and value:
+            display_value = f"{value[:8]}..." if len(value) > 8 else "***"
+        else:
+            display_value = value
+
+        typer.echo(f"  - {key}{required_marker}: {display_value}")
+
+    # Show missing required fields
+    missing_required = []
+    for field_name, field_info in schema_info.items():
+        if field_info.get("required", False) and field_name not in config.config:
+            missing_required.append(field_name)
+
+    if missing_required:
+        typer.echo(f"\n⚠️  Missing required fields: {', '.join(missing_required)}")
+        typer.echo("   Use 'elenchus set-config <field> <value>' to set them")
 
 
 def show_schema():

@@ -8,6 +8,8 @@ from pathlib import Path
 
 from config.manager import config
 from core.test_generator import generate_test_for_put, get_all_put_ids
+from core.csv_manager import ExperimentCSVManager
+from core.experiment_recorder import ExperimentRecorder
 
 
 def generate_tests(
@@ -51,6 +53,12 @@ def generate_tests(
         "--coverage",
         help="Measure coverage for the target module using pytest-cov",
     ),
+    prompt_id: Optional[str] = typer.Option(
+        None,
+        "--prompt-id",
+        "-p",
+        help="Prompt technique ID to use (defaults to config default_prompt_id)",
+    ),
 ):
     """Generate tests for extracted PUTs using LLM."""
 
@@ -61,11 +69,18 @@ def generate_tests(
     if max_iterations is not None:
         cli_args["max_iterations"] = max_iterations
 
+    # Include prompt_id in CLI args if provided
+    if prompt_id is not None:
+        cli_args["default_prompt_id"] = prompt_id
+
     final_config = config.get_config_with_priority(cli_args)
 
-    # Use configuration values
+    # Use configuration values - all must be present
     output_dir = final_config["output_dir"]
     max_iterations = final_config["max_iterations"]
+    experiments_dir = final_config["experiments_dir"]
+    prompt_id_val = final_config["default_prompt_id"]
+    track_experiments = final_config["track_experiments"]
 
     # Validate configuration
     if not config.validate():
@@ -74,7 +89,7 @@ def generate_tests(
 
     # Check if LLM API key is configured (only needed for non-local providers)
     llm_api_key = final_config.get("llm_api_key")
-    llm_model = final_config.get("llm_model")
+    llm_model = final_config["llm_model"]
 
     # Check if we need an API key for this provider
     # Local providers typically don't need API keys
@@ -91,8 +106,9 @@ def generate_tests(
 
     typer.echo(f"Generating tests from {input_dir} to {output_dir}")
     typer.echo(f"Max iterations: {max_iterations}")
-    typer.echo(f"Using LLM model: {final_config.get('llm_model')}")
-    typer.echo(f"LLM temperature: {final_config.get('llm_temperature')}")
+    typer.echo(f"Using LLM model: {final_config['llm_model']}")
+    typer.echo(f"LLM temperature: {final_config['llm_temperature']}")
+    typer.echo(f"Prompt ID: {prompt_id_val}")
 
     # Determine targets: either a single file or a directory listing
     if file:
@@ -124,6 +140,10 @@ def generate_tests(
     tests_dir = output_path / "tests"
     tests_dir.mkdir(exist_ok=True)
 
+    # Prepare experiment recording
+    csv_manager = ExperimentCSVManager(experiments_dir=experiments_dir)
+    recorder = ExperimentRecorder(csv_manager) if track_experiments else None
+
     # Process each PUT
     successful = 0
     failed = 0
@@ -140,6 +160,8 @@ def generate_tests(
                 tests_dir=str(tests_dir),
                 run=run,
                 measure_coverage=coverage,
+                prompt_id=prompt_id_val,
+                experiment_recorder=recorder,
             )
 
             if result["success"]:
