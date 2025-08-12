@@ -218,5 +218,8 @@ HumanEval/
 # Generated outputs
 /generated_tests/
 
+# Test output directory
+/test_output/
+
 # Experiment data and results
 /experiments/
