@@ -2,15 +2,94 @@
 Prompt Manager for handling prompt techniques and versions.
 """
 
+import os
+import re
+from pathlib import Path
 from typing import Dict, Any, List, Optional
+import yaml
 from .csv_manager import ExperimentCSVManager
 
 
 class PromptManager:
-    """Manages prompt techniques stored in CSV files."""
+    """Manages prompt techniques stored in CSV files and loads templates from external files."""
 
-    def __init__(self, csv_manager: ExperimentCSVManager):
+    # Compiled regex pattern for validating template names
+    TEMPLATE_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
+
+    def __init__(self, csv_manager: ExperimentCSVManager, prompts_dir: str = "prompts"):
         self.csv_manager = csv_manager
+        self.prompts_dir = Path(prompts_dir)
+        self.template_dir = self.prompts_dir / "templates"
+        self.config_file = self.prompts_dir / "prompt_config.yaml"
+
+        # Load prompt configuration
+        self.prompt_config = self._load_prompt_config()
+
+        # Validate template files exist
+        self._validate_templates()
+
+    def _load_prompt_config(self) -> Dict[str, Any]:
+        """Load prompt configuration from YAML file."""
+        if not self.config_file.exists():
+            raise FileNotFoundError(
+                f"Prompt configuration file not found: {self.config_file}"
+            )
+
+        try:
+            with open(self.config_file, "r", encoding="utf-8") as f:
+                config = yaml.safe_load(f)
+            return config
+        except yaml.YAMLError as e:
+            raise ValueError(f"Error parsing prompt configuration: {e}")
+
+    def _validate_templates(self):
+        """Validate that all template files referenced in config exist."""
+        if "prompt_templates" not in self.prompt_config:
+            raise ValueError(
+                "Missing 'prompt_templates' section in prompt configuration"
+            )
+
+        if not isinstance(self.prompt_config["prompt_templates"], dict):
+            raise ValueError("'prompt_templates' must be a dictionary")
+
+        if not self.prompt_config["prompt_templates"]:
+            raise ValueError("'prompt_templates' dictionary cannot be empty")
+
+        for category, template_info in self.prompt_config["prompt_templates"].items():
+            if not isinstance(template_info, dict):
+                raise ValueError(
+                    f"Template info for category '{category}' must be a dictionary"
+                )
+
+            template_file = template_info.get("template_file")
+            if not template_file or not isinstance(template_file, str):
+                raise ValueError(
+                    f"Missing or invalid template_file for category: {category}"
+                )
+
+            template_path = self.template_dir / template_file
+            if not template_path.exists():
+                raise FileNotFoundError(f"Template file not found: {template_path}")
+
+    def _load_template_content(self, template_file: str) -> str:
+        """Load template content from file."""
+        template_path = self.template_dir / template_file
+
+        try:
+            with open(template_path, "r", encoding="utf-8") as f:
+                return f.read()
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Template file not found: {template_path}")
+        except Exception as e:
+            raise RuntimeError(f"Error reading template file {template_path}: {e}")
+
+    def _get_template_file_for_category(self, category: str) -> str:
+        """Get the template file name for a given category."""
+        if category not in self.prompt_config["prompt_templates"]:
+            # Use default template if category not found
+            return self.prompt_config.get("default_template", "zero_shot.txt")
+
+        return self.prompt_config["prompt_templates"][category]["template_file"]
 
     def register_prompt_technique(self, technique: Dict[str, Any]):
         """Register a new prompt technique to CSV."""
@@ -164,106 +243,92 @@ class PromptManager:
                 f"Prompt technique {prompt_id} missing required 'category' field"
             )
 
-        # For now, return a basic template based on category
-        # TODO: Move these templates to configuration files
-        if category == "chain-of-thought":
-            return """You are a Python testing expert. Think through this step by step:
+        # Get template file for the category
+        template_file = self._get_template_file_for_category(category)
 
-1. First, analyze the function to understand what it does
-2. Identify the key functionality and edge cases
-3. Consider what could go wrong
-4. Generate comprehensive tests
+        # Load template content from file
+        template_content = self._load_template_content(template_file)
 
-Function to test:
-```python
-{put_source_code}
-```
+        return template_content
 
-Context:
-- The function above is saved in a module named: {put_id}.py
-- When importing in the test, import from that module name
+    def get_available_templates(self) -> List[str]:
+        """Get list of available template files."""
+        if not self.template_dir.exists():
+            return []
 
-Requirements:
-- Generate ONLY the test code, no explanations
-- Use Pytest syntax and conventions
-- Include multiple test cases covering edge cases
-- Test both valid and invalid inputs
-- Use descriptive test function names
-- Import the function from the module `{put_id}`
+        template_files = []
+        for file_path in self.template_dir.glob("*.txt"):
+            template_files.append(file_path.name)
 
-Output the test code in a Python code block:
-```python
-# Your test code here
-```"""
+        return sorted(template_files)
 
-        elif category == "few-shot":
-            return """You are a Python testing expert. Here are some examples of good test patterns:
+    def _validate_template_name(self, template_name: str):
+        """Validate template name to prevent path traversal."""
+        if not template_name or not isinstance(template_name, str):
+            raise ValueError("Template name must be a non-empty string")
 
-Example 1 - Testing a simple function:
-```python
-def test_simple_function():
-    result = simple_function(2, 3)
-    assert result == 5
-    
-def test_edge_case():
-    result = simple_function(0, 0)
-    assert result == 0
-```
+        # Check for path separators and parent references
+        if os.path.sep in template_name or ".." in template_name:
+            raise ValueError(
+                "Template name cannot contain path separators or parent references"
+            )
 
-Example 2 - Testing with different input types:
-```python
-def test_valid_inputs():
-    assert function("hello") == "HELLO"
-    assert function("world") == "WORLD"
-    
-def test_invalid_inputs():
-    with pytest.raises(ValueError):
-        function("")
-```
+        # Check for safe characters only (letters, numbers, underscores, hyphens)
+        if not self.TEMPLATE_NAME_PATTERN.match(template_name):
+            raise ValueError(
+                "Template name can only contain letters, numbers, underscores, and hyphens"
+            )
 
-Now generate tests for this function:
-```python
-{put_source_code}
-```
+    def _get_validated_template_path(self, template_name: str) -> Path:
+        """Get a validated template path after validation and resolution checks."""
+        self._validate_template_name(template_name)
 
-Context:
-- The function above is saved in a module named: {put_id}.py
-- When importing in the test, import from that module name
+        template_path = self.template_dir / f"{template_name}.txt"
 
-Requirements:
-- Generate ONLY the test code, no explanations
-- Use Pytest syntax and conventions
-- Include multiple test cases covering edge cases
-- Test both valid and invalid inputs
-- Use descriptive test function names
-- Import the function from the module `{put_id}`
+        # Ensure the resolved path is within template_dir
+        try:
+            resolved_path = template_path.resolve()
+            if not resolved_path.is_relative_to(self.template_dir.resolve()):
+                raise ValueError("Template path would be outside template directory")
+        except (RuntimeError, ValueError) as e:
+            raise ValueError(f"Invalid template path: {e}")
 
-Output the test code in a Python code block:
-```python
-# Your test code here
-```"""
+        return template_path
 
-        else:  # zero-shot
-            return """You are a Python testing expert. Generate a comprehensive Pytest-compatible test file for the following function.
+    def add_custom_template(self, template_name: str, template_content: str):
+        """Add a custom template file."""
+        template_path = self._get_validated_template_path(template_name)
 
-Function to test:
-```python
-{put_source_code}
-```
+        try:
+            with open(template_path, "w", encoding="utf-8") as f:
+                f.write(template_content)
+            print(f"✅ Custom template '{template_name}' added successfully")
+        except Exception as e:
+            raise RuntimeError(f"Error creating custom template: {e}")
 
-Context:
-- The function above is saved in a module named: {put_id}.py
-- When importing in the test, import from that module name, e.g., `from {put_id} import <function_name>`.
+    def update_template(self, template_name: str, template_content: str):
+        """Update an existing template file."""
+        template_path = self._get_validated_template_path(template_name)
 
-Requirements:
-- Generate ONLY the test code, no explanations
-- Use Pytest syntax and conventions
-- Include multiple test cases covering edge cases
-- Test both valid and invalid inputs
-- Use descriptive test function names
-- Import the function from the module `{put_id}`
+        if not template_path.exists():
+            raise FileNotFoundError(f"Template '{template_name}' not found")
 
-Output the test code in a Python code block:
-```python
-# Your test code here
-```"""
+        try:
+            with open(template_path, "w", encoding="utf-8") as f:
+                f.write(template_content)
+            print(f"✅ Template '{template_name}' updated successfully")
+        except Exception as e:
+            raise RuntimeError(f"Error updating template: {e}")
+
+    def delete_template(self, template_name: str):
+        """Delete a template file."""
+        template_path = self._get_validated_template_path(template_name)
+
+        if not template_path.exists():
+            raise FileNotFoundError(f"Template '{template_name}' not found")
+
+        try:
+            template_path.unlink()
+            print(f"✅ Template '{template_name}' deleted successfully")
+        except Exception as e:
+            raise RuntimeError(f"Error deleting template: {e}")

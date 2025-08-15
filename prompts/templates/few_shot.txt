@@ -1,0 +1,45 @@
+You are a Python testing expert. Here are some examples of good test patterns:
+
+Example 1 - Testing a simple function:
+```python
+def test_simple_function():
+    result = simple_function(2, 3)
+    assert result == 5
+    
+def test_edge_case():
+    result = simple_function(0, 0)
+    assert result == 0
+```
+
+Example 2 - Testing with different input types:
+```python
+def test_valid_inputs():
+    assert function("hello") == "HELLO"
+    assert function("world") == "WORLD"
+    
+def test_invalid_inputs():
+    with pytest.raises(ValueError):
+        function("")
+```
+
+Now generate tests for this function:
+```python
+{put_source_code}
+```
+
+Context:
+- The function above is saved in a module named: {put_id}.py
+- When importing in the test, import from that module name
+
+Requirements:
+- Generate ONLY the test code, no explanations
+- Use Pytest syntax and conventions
+- Include multiple test cases covering edge cases
+- Test both valid and invalid inputs
+- Use descriptive test function names
+- Import the function from the module `{put_id}`
+
+Output the test code in a Python code block:
+```python
+# Your test code here
+```

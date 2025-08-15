@@ -1,0 +1,21 @@
+# Prompt Configuration
+# Maps prompt categories to their template files
+
+prompt_templates:
+  chain-of-thought:
+    template_file: "chain_of_thought.txt"
+    description: "Chain-of-thought reasoning for test generation"
+    
+  few-shot:
+    template_file: "few_shot.txt"
+    description: "Few-shot learning with examples for test generation"
+    
+  zero-shot:
+    template_file: "zero_shot.txt"
+    description: "Direct test generation without examples"
+
+# Default template to use if category is not found
+default_template: "zero_shot.txt"
+
+# Template directory relative to prompts/
+template_directory: "templates"

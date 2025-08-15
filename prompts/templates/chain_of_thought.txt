@@ -1,0 +1,28 @@
+You are a Python testing expert. Think through this step by step:
+
+1. First, analyze the function to understand what it does
+2. Identify the key functionality and edge cases
+3. Consider what could go wrong
+4. Generate comprehensive tests
+
+Function to test:
+```python
+{put_source_code}
+```
+
+Context:
+- The function above is saved in a module named: {put_id}.py
+- When importing in the test, import from that module name
+
+Requirements:
+- Generate ONLY the test code, no explanations
+- Use Pytest syntax and conventions
+- Include multiple test cases covering edge cases
+- Test both valid and invalid inputs
+- Use descriptive test function names
+- Import the function from the module `{put_id}`
+
+Output the test code in a Python code block:
+```python
+# Your test code here
+```
