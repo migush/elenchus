@@ -11,7 +11,12 @@ app = typer.Typer()
 
 @app.command()
 def list_prompts():
-    """List all available prompt techniques."""
+    """
+    List all available prompt techniques.
+    
+    Retrieves all prompt techniques (including inactive ones) and prints a formatted table to the console with columns:
+    ID, Name, Category, Version, Active, Description. If no techniques are found, prints "No prompt techniques found."
+    """
     csv_manager = ExperimentCSVManager()
     prompt_manager = PromptManager(csv_manager)
     prompts = prompt_manager.list_prompt_techniques(active_only=False)
