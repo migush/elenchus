@@ -19,6 +19,18 @@ from .commands.list_prompts import list_prompts
 
 
 def version_callback(value: bool):
+    """
+    Print the CLI version and exit when the version flag is set.
+    
+    If `value` is truthy (the user passed the global --version/-V flag), this prints the current
+    Elenchus CLI version and terminates the application by raising typer.Exit.
+    
+    Parameters:
+        value (bool): The parsed value of the global version flag.
+    
+    Raises:
+        typer.Exit: Always raised when `value` is truthy to stop CLI execution after printing the version.
+    """
     if value:
         typer.echo(f"Elenchus CLI v{__version__}")
         raise typer.Exit()
@@ -59,7 +71,11 @@ app.command(name="list-prompts")(list_prompts)
 
 
 def run_app():
-    """Run the CLI application with proper help handling."""
+    """
+    Run the Typer CLI, ensuring help is shown when no arguments are provided.
+    
+    If the process was invoked without additional command-line arguments, inserts `--help` into sys.argv so the CLI prints usage and exits; otherwise invokes the Typer app normally.
+    """
 
     if len(sys.argv) == 1:
         sys.argv.insert(1, "--help")

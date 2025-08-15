@@ -85,7 +85,11 @@ class Config:
         return get_default_config()
 
     def _save_config(self, config: Dict) -> None:
-        """Save configuration to file."""
+        """
+        Write the provided configuration dictionary to the instance's config file as YAML.
+        
+        Creates the parent directory for self.config_file if it doesn't exist and writes `config` using YAML block style. Errors are caught and reported via a warning message; the function does not raise on I/O or serialization failures.
+        """
         try:
             os.makedirs(os.path.dirname(self.config_file), exist_ok=True)
             with open(self.config_file, "w") as f:
@@ -186,7 +190,17 @@ class Config:
                 typer.echo(f"# {env_var}=")
 
     def get_config_with_priority(self, cli_args: Dict = None) -> Dict:
-        """Get configuration with proper priority order: CLI args > env vars > config file > defaults."""
+        """
+        Return the effective configuration dictionary using the precedence:
+        CLI args > environment variables > config file > defaults.
+        
+        Parameters:
+            cli_args (Dict, optional): Mapping of configuration keys to values provided by the caller (typically parsed CLI options).
+                Keys with value `None` are ignored (do not override lower-precedence sources).
+        
+        Returns:
+            Dict: A new dictionary containing the merged configuration with the described priority order.
+        """
         # Start with default config to ensure all required fields are present
         final_config = get_default_config().copy()
 
