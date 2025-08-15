@@ -15,6 +15,7 @@ from .commands.config import config_cmd
 from .commands.set_config import set_config_cmd
 from .commands.info import info
 from .commands.test_config import test_config_cmd
+from .commands.list_prompts import list_prompts
 
 
 def version_callback(value: bool):
@@ -54,6 +55,7 @@ app.command(name="config")(config_cmd)
 app.command(name="set-config")(set_config_cmd)
 app.command(name="info")(info)
 app.command(name="test-config")(test_config_cmd)
+app.command(name="list-prompts")(list_prompts)
 
 
 def run_app():
