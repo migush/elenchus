@@ -44,7 +44,7 @@ def read_put_file(put_id: str, human_eval_dir: str = "HumanEval") -> str:
 
 def build_test_generation_prompt(
     put_id: str,
-    put_source_code: str,
+    source_code: str,
     previous_test_code: Optional[str] = None,
     feedback: Optional[str] = None,
 ) -> str:
@@ -52,7 +52,10 @@ def build_test_generation_prompt(
     Build a prompt for LLM test generation.
 
     Args:
-        put_source_code: The full source code of the PUT
+        put_id: The PUT identifier (e.g., "he_0")
+        source_code: The full source code of the PUT
+        previous_test_code: Previous test code for iterative improvement
+        feedback: Feedback from previous test generation attempts
 
     Returns:
         Formatted prompt string for the LLM
@@ -61,7 +64,7 @@ def build_test_generation_prompt(
 
 Function to test:
 ```python
-{put_source_code}
+{source_code}
 ```
 
 Context:
@@ -266,7 +269,7 @@ def generate_test_for_put(
     try:
         experiment_id: Optional[str] = None
         # Step 1: Read PUT file
-        put_source_code = read_put_file(put_id, human_eval_dir)
+        source_code = read_put_file(put_id, human_eval_dir)
 
         max_iterations = int(config.get("max_iterations", 1) or 1)
         previous_test_code: Optional[str] = None
@@ -289,7 +292,7 @@ def generate_test_for_put(
             # Step 2: Build prompt (with feedback from previous attempt if any)
             prompt = build_test_generation_prompt(
                 put_id,
-                put_source_code,
+                source_code,
                 previous_test_code=previous_test_code,
                 feedback=feedback,
             )

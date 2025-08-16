@@ -6,19 +6,23 @@ import sys
 import typer
 from functools import wraps
 
+# Import version from parent package
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from __init__ import __version__
 
 
 def version_callback(value: bool):
     """
     Print the CLI version and exit when the version flag is set.
-    
+
     If `value` is truthy (the user passed the global --version/-V flag), this prints the current
     Elenchus CLI version and terminates the application by raising typer.Exit.
-    
+
     Parameters:
         value (bool): The parsed value of the global version flag.
-    
+
     Raises:
         typer.Exit: Always raised when `value` is truthy to stop CLI execution after printing the version.
     """
@@ -146,8 +150,8 @@ def config_cmd_wrapper(
 @app.command(name="set-config")
 @lazy_command("cli.commands.set_config", "set_config_cmd")
 def set_config_cmd_wrapper(
-    field: str = typer.Argument(..., help="Configuration field to set"),
-    value: str = typer.Argument(..., help="Value to set"),
+    field: str = typer.Option(None, "--field", "-f", help="Configuration field to set"),
+    value: str = typer.Option(None, "--value", "-v", help="Value to set"),
 ):
     """Set a configuration field dynamically."""
     pass
@@ -177,7 +181,7 @@ def list_prompts_cmd():
 def run_app():
     """
     Run the Typer CLI, ensuring help is shown when no arguments are provided.
-    
+
     If the process was invoked without additional command-line arguments, inserts `--help` into sys.argv so the CLI prints usage and exits; otherwise invokes the Typer app normally.
     """
 

@@ -222,7 +222,6 @@ class Config:
         self._ensure_loaded()
         # Start with default config to ensure all required fields are present
         final_config = get_default_config().copy()
-
         # Overlay config file values
         final_config.update(self.config)
 

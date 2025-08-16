@@ -37,8 +37,26 @@ prompt_templates:
 
 Each template file contains the actual prompt text with placeholders for dynamic content:
 
-- `{put_source_code}` - The source code of the function to test
-- `{put_id}` - The module name/ID for importing the function
+- `{source_code}` - The source code of the function to test
+- `{template_id}` - The module name/ID for importing the function
+
+### Template Formatting
+
+Templates use Python's `str.format()` method with these placeholders:
+- `{source_code}`: Replaces with the provided source code
+- `{template_id}`: Replaces with the template identifier (typically used for module naming in import statements)
+
+To include literal braces in templates, escape them by doubling:
+- Use `{{` to represent a literal `{` character
+- Use `}}` to represent a literal `}` character
+
+Example template usage:
+```python
+def test_function():
+    from {template_id} import function_name
+    # Test the following code:
+    {source_code}
+```
 
 ## Adding New Templates
 
@@ -61,6 +79,13 @@ prompt_manager = PromptManager(csv_manager, prompts_dir="custom_prompts")
 
 # Get template for a specific category
 template = prompt_manager.get_prompt_template("my_category")
+
+# Get template with source code and template ID
+template = prompt_manager.get_prompt_template(
+    "my_category", 
+    source_code="def example(): pass", 
+    template_id="example_module"
+)
 ```
 
 ## Benefits of External Templates

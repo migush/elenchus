@@ -216,9 +216,9 @@ def get_env_mapping() -> Dict[str, str]:
 def get_default_config() -> Dict[str, Any]:
     """
     Return a dictionary of the canonical default configuration values for the ConfigSchema.
-    
+
     The returned mapping uses schema field names as keys and provides the single source-of-truth defaults used when no user configuration is supplied. Values include defaults for dataset and output paths, experiment settings, LLM settings (model, provider, temperature, max tokens, timeout, and optional API/base URL), logging, prompt selection, and experiment tracking.
-    
+
     Returns:
         Dict[str, Any]: A mapping from configuration field name to its default value (e.g., "human_eval_url", "output_dir", "llm_model", "llm_timeout", "log_level", etc.).
     """

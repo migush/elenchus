@@ -13,7 +13,7 @@ app = typer.Typer()
 def list_prompts():
     """
     List all available prompt techniques.
-    
+
     Retrieves all prompt techniques (including inactive ones) and prints a formatted table to the console with columns:
     ID, Name, Category, Version, Active, Description. If no techniques are found, prints "No prompt techniques found."
     """
