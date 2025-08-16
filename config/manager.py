@@ -36,7 +36,7 @@ class Config:
     def _ensure_config_dir_exists(self):
         """Ensure the configuration directory exists."""
         config_dir = Path(self.config_file).parent
-        config_dir.mkdir(exist_ok=True)
+        config_dir.mkdir(parents=True, exist_ok=True)
 
     def _ensure_loaded(self):
         """Ensure configuration is loaded."""
@@ -281,18 +281,23 @@ def get_config():
     return _config_instance
 
 
-# For backward compatibility, provide a config variable that lazy-loads
+# Performance optimization: Lazy-loading configuration wrapper to defer initialization
 class LazyConfig:
-    """Lazy-loading configuration wrapper."""
+    """Lazy-loading configuration wrapper that defers Config instance creation until first access."""
 
     def __getattr__(self, name):
+        """Delegate attribute access to the underlying Config instance."""
         return getattr(get_config(), name)
 
     def __getitem__(self, key):
+        """Delegate dictionary-style access to the underlying Config instance."""
         return get_config()[key]
 
     def get(self, key, default=None):
+        """Delegate get() method calls to the underlying Config instance."""
         return get_config().get(key, default)
 
 
+# Global configuration proxy that lazy-loads the actual Config instance
+# This maintains the existing import pattern while enabling performance optimization
 config = LazyConfig()

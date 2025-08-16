@@ -65,7 +65,7 @@ The system supports multiple configuration sources with priority order:
 3. Configuration file (`~/.elenchus/config.yaml`)
 4. Schema defaults (lowest priority)
 
-See [configuration.md](configuration.md) for detailed configuration options.
+See [examples/config.yaml](examples/config.yaml) for a configuration example and [config/schema.py](config/schema.py) for the complete configuration schema.
 
 ## Development
 
@@ -108,4 +108,4 @@ pixi run pytest --cov
 
 ## License
 
-See [LICENSE](../LICENSE) for details.
+See [LICENSE](LICENSE) for details.

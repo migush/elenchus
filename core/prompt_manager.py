@@ -28,6 +28,13 @@ class PromptManager:
         self.csv_manager = csv_manager
         self.prompts_dir = Path(prompts_dir)
         self.template_dir = self.prompts_dir / "templates"
+
+        # Cache the resolved template directory path to avoid repeated resolution
+        try:
+            self._resolved_template_dir = self.template_dir.resolve()
+        except (RuntimeError, OSError) as e:
+            raise ValueError(f"Failed to resolve template directory path: {e}")
+
         self.config_file = self.prompts_dir / "prompt_config.yaml"
 
         # Load prompt configuration
@@ -198,7 +205,7 @@ class PromptManager:
             return None
 
         # Filter by prompt_id and active status
-        technique = df[(df["prompt_id"] == prompt_id) & (df["is_active"] == True)]
+        technique = df[(df["prompt_id"] == prompt_id) & df["is_active"]]
 
         if technique.empty:
             return None
@@ -217,7 +224,7 @@ class PromptManager:
 
         # Apply filters
         if active_only:
-            df = df[df["is_active"] == True]
+            df = df[df["is_active"]]
 
         if category:
             df = df[df["category"] == category]
@@ -419,7 +426,7 @@ class PromptManager:
         # Ensure the resolved path is within template_dir
         try:
             resolved_path = template_path.resolve()
-            if not resolved_path.is_relative_to(self.template_dir.resolve()):
+            if not resolved_path.is_relative_to(self._resolved_template_dir):
                 raise ValueError("Template path would be outside template directory")
         except (RuntimeError, ValueError) as e:
             raise ValueError(f"Invalid template path: {e}")
