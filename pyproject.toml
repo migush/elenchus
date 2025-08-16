@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "elenchus"
+dynamic = ["version"]
+description = "HumanEval test generation framework"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Miroslav Georgiev", email = "miro.georgiev@gmail.com"}
+]
+urls = {Homepage = "https://github.com/miroslavgeorgiev/elenchus"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.13"
+dependencies = [
+    "typer>=0.16.0",
+    "pyyaml>=6.0.1",
+    "python-dotenv>=1.1.1",
+    "litellm>=1.75.0",
+    "requests>=2.32.4",
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+    "pandas>=2.2.0",
+    "matplotlib>=3.8.0",
+    "seaborn>=0.13.0",
+    "scipy>=1.12.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=25.1.0",
+    "pre-commit>=4.2.0",
+    "debugpy>=1.8.15",
+    "ipython>=9.4.0",
+]
+
+[project.scripts]
+elenchus = "cli.app:app"
+
+[tool.setuptools.dynamic]
+version = {attr = "__init__.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.txt", "*.md"]

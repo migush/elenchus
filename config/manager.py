@@ -23,16 +23,27 @@ class Config:
 
     def __init__(self, config_file: Optional[str] = None):
         self.config_file = config_file or self._get_default_config_path()
-        # Load environment variables first
-        self._load_env_vars()
-        # Then load config file (will be merged with env vars)
-        self.config = self._load_config()
+        # Defer loading until actually needed
+        self._config = None
+        self._env_config = None
+        self._loaded = False
 
     def _get_default_config_path(self) -> str:
         """Get the default configuration file path."""
         config_dir = Path.home() / ".elenchus"
-        config_dir.mkdir(exist_ok=True)
         return str(config_dir / "config.yaml")
+
+    def _ensure_config_dir_exists(self):
+        """Ensure the configuration directory exists."""
+        config_dir = Path(self.config_file).parent
+        config_dir.mkdir(parents=True, exist_ok=True)
+
+    def _ensure_loaded(self):
+        """Ensure configuration is loaded."""
+        if not self._loaded:
+            self._load_env_vars()
+            self._config = self._load_config()
+            self._loaded = True
 
     def _load_env_vars(self) -> None:
         """Load environment variables from .env file and os.environ."""
@@ -40,7 +51,7 @@ class Config:
         load_dotenv()
 
         # Store environment variables for later use
-        self.env_config = {}
+        self._env_config = {}
         env_mapping = get_env_mapping()
 
         for env_var, config_key in env_mapping.items():
@@ -53,7 +64,7 @@ class Config:
                 # Convert value to appropriate type
                 converted_value = convert_value(value, field_type)
                 if converted_value is not None:
-                    self.env_config[config_key] = converted_value
+                    self._env_config[config_key] = converted_value
 
     def _load_config(self) -> Dict:
         """Load configuration from file or create default."""
@@ -75,7 +86,7 @@ class Config:
             self._save_config(config)
 
         # Override with environment variables (highest priority)
-        config.update(self.env_config)
+        config.update(self._env_config)
 
         return config
 
@@ -85,9 +96,13 @@ class Config:
         return get_default_config()
 
     def _save_config(self, config: Dict) -> None:
-        """Save configuration to file."""
+        """
+        Write the provided configuration dictionary to the instance's config file as YAML.
+
+        Creates the parent directory for self.config_file if it doesn't exist and writes `config` using YAML block style. Errors are caught and reported via a warning message; the function does not raise on I/O or serialization failures.
+        """
         try:
-            os.makedirs(os.path.dirname(self.config_file), exist_ok=True)
+            self._ensure_config_dir_exists()
             with open(self.config_file, "w") as f:
                 yaml.dump(config, f, default_flow_style=False)
         except Exception as e:
@@ -99,22 +114,26 @@ class Config:
 
     def get(self, key: str, default=None):
         """Get a configuration value."""
+        self._ensure_loaded()
         return self.config.get(key, default)
 
     def set(self, key: str, value) -> None:
         """Set a configuration value and save to file."""
+        self._ensure_loaded()
         self.config[key] = value
         self._save_config(self.config)
 
     def reset(self) -> None:
         """Reset configuration to defaults."""
-        self.config = get_default_config()
+        self._ensure_loaded()
+        self._config = get_default_config()
         # Keep environment variables
-        self.config.update(self.env_config)
-        self._save_config(self.config)
+        self._config.update(self._env_config)
+        self._save_config(self._config)
 
     def show(self) -> None:
         """Display current configuration."""
+        self._ensure_loaded()
         typer.echo("Current configuration:")
         sensitive_fields = get_sensitive_fields()
 
@@ -128,6 +147,7 @@ class Config:
 
     def show_env_vars(self) -> None:
         """Display environment variables."""
+        self._ensure_loaded()
         typer.echo("Environment variables:")
         env_mapping = get_env_mapping()
         sensitive_fields = get_sensitive_fields()
@@ -146,6 +166,7 @@ class Config:
 
     def validate(self) -> bool:
         """Validate current configuration."""
+        self._ensure_loaded()
         is_valid, errors = self._validate_config(self.config)
         if is_valid:
             typer.echo("✅ Configuration is valid!")
@@ -173,6 +194,7 @@ class Config:
 
     def export_env_vars(self) -> None:
         """Export configuration as environment variables."""
+        self._ensure_loaded()
         typer.echo("# Elenchus Configuration Environment Variables")
         typer.echo("# Add these to your .env file or export them:")
         typer.echo()
@@ -186,10 +208,20 @@ class Config:
                 typer.echo(f"# {env_var}=")
 
     def get_config_with_priority(self, cli_args: Dict = None) -> Dict:
-        """Get configuration with proper priority order: CLI args > env vars > config file > defaults."""
+        """
+        Return the effective configuration dictionary using the precedence:
+        CLI args > environment variables > config file > defaults.
+
+        Parameters:
+            cli_args (Dict, optional): Mapping of configuration keys to values provided by the caller (typically parsed CLI options).
+                Keys with value `None` are ignored (do not override lower-precedence sources).
+
+        Returns:
+            Dict: A new dictionary containing the merged configuration with the described priority order.
+        """
+        self._ensure_loaded()
         # Start with default config to ensure all required fields are present
         final_config = get_default_config().copy()
-
         # Overlay config file values
         final_config.update(self.config)
 
@@ -223,6 +255,48 @@ class Config:
             }
         return schema_info
 
+    @property
+    def config(self):
+        """Get configuration, loading it if necessary."""
+        self._ensure_loaded()
+        return self._config
 
-# Global configuration instance
-config = Config()
+    @property
+    def env_config(self):
+        """Get environment configuration, loading it if necessary."""
+        self._ensure_loaded()
+        return self._env_config
+
+
+# Global configuration instance - lazy loaded
+_config_instance = None
+
+
+def get_config():
+    """Get the global configuration instance, creating it if needed."""
+    global _config_instance
+    if _config_instance is None:
+        _config_instance = Config()
+    return _config_instance
+
+
+# Performance optimization: Lazy-loading configuration wrapper to defer initialization
+class LazyConfig:
+    """Lazy-loading configuration wrapper that defers Config instance creation until first access."""
+
+    def __getattr__(self, name):
+        """Delegate attribute access to the underlying Config instance."""
+        return getattr(get_config(), name)
+
+    def __getitem__(self, key):
+        """Delegate dictionary-style access to the underlying Config instance."""
+        return get_config().get(key)
+
+    def get(self, key, default=None):
+        """Delegate get() method calls to the underlying Config instance."""
+        return get_config().get(key, default)
+
+
+# Global configuration proxy that lazy-loads the actual Config instance
+# This maintains the existing import pattern while enabling performance optimization
+config = LazyConfig()

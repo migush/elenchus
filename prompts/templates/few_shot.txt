@@ -24,11 +24,11 @@ def test_invalid_inputs():
 
 Now generate tests for this function:
 ```python
-{put_source_code}
+{source_code}
 ```
 
 Context:
-- The function above is saved in a module named: {put_id}.py
+- The function above is saved in a module named: {template_id}.py
 - When importing in the test, import from that module name
 
 Requirements:
@@ -37,7 +37,7 @@ Requirements:
 - Include multiple test cases covering edge cases
 - Test both valid and invalid inputs
 - Use descriptive test function names
-- Import the function from the module `{put_id}`
+- Import the function from the module `{template_id}`
 
 Output the test code in a Python code block:
 ```python
