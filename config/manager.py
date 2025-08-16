@@ -126,10 +126,10 @@ class Config:
     def reset(self) -> None:
         """Reset configuration to defaults."""
         self._ensure_loaded()
-        self.config = get_default_config()
+        self._config = get_default_config()
         # Keep environment variables
-        self.config.update(self._env_config)
-        self._save_config(self.config)
+        self._config.update(self._env_config)
+        self._save_config(self._config)
 
     def show(self) -> None:
         """Display current configuration."""
@@ -290,7 +290,7 @@ class LazyConfig:
 
     def __getitem__(self, key):
         """Delegate dictionary-style access to the underlying Config instance."""
-        return get_config()[key]
+        return get_config().get(key)
 
     def get(self, key, default=None):
         """Delegate get() method calls to the underlying Config instance."""

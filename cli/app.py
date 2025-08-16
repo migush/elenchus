@@ -7,10 +7,29 @@ import typer
 from functools import wraps
 
 # Import version from parent package
-import os
+try:
+    # Try to import from the installed package first
+    import importlib.metadata
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from __init__ import __version__
+    __version__ = importlib.metadata.version("elenchus")
+except ImportError:
+    # Fallback to dynamic import from source
+    import importlib.util
+    import os
+
+    # Get the path to the parent directory's __init__.py (current working directory)
+    parent_dir = os.getcwd()
+    init_path = os.path.join(parent_dir, "__init__.py")
+
+    if os.path.exists(init_path):
+        # Load the module dynamically
+        spec = importlib.util.spec_from_file_location("elenchus_init", init_path)
+        elenchus_init = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(elenchus_init)
+        __version__ = elenchus_init.__version__
+    else:
+        # Fallback version
+        __version__ = "0.1.0"
 
 
 def version_callback(value: bool):
@@ -60,11 +79,29 @@ def lazy_command(module_path: str, function_name: str):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            # Import the module only when the command is executed
-            module = __import__(module_path, fromlist=[function_name])
-            command_func = getattr(module, function_name)
-            # Call the original function with the same signature
-            return command_func(*args, **kwargs)
+            try:
+                # Import the module only when the command is executed
+                module = __import__(module_path, fromlist=[function_name])
+                command_func = getattr(module, function_name)
+
+                # Validate that the retrieved attribute is callable
+                if not callable(command_func):
+                    raise RuntimeError(
+                        f"Attribute '{function_name}' from module '{module_path}' is not callable. "
+                        f"Got type: {type(command_func).__name__}"
+                    )
+
+                # Call the original function with the same signature
+                return command_func(*args, **kwargs)
+
+            except ImportError as e:
+                raise RuntimeError(
+                    f"Failed to import module '{module_path}': {e}"
+                ) from e
+            except AttributeError as e:
+                raise RuntimeError(
+                    f"Function '{function_name}' not found in module '{module_path}': {e}"
+                ) from e
 
         return wrapper
 
