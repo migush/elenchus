@@ -229,9 +229,46 @@ class PromptManager:
         self.register_prompt_technique(technique)
 
     def get_prompt_template(
-        self, prompt_id: str, put_source_code: str = "", put_id: str = ""
+        self, prompt_id: str, source_code: str = "", template_id: str = ""
     ) -> Optional[str]:
-        """Get the prompt template for a given prompt ID."""
+        """
+        Get the prompt template for a given prompt ID.
+
+        This method loads a template file based on the prompt technique's category,
+        then formats it with the provided source code and template identifier.
+
+        Args:
+            prompt_id: The unique identifier for the prompt technique
+            source_code: The source code to be inserted into the template.
+                        Defaults to empty string for backward compatibility.
+            template_id: The identifier used in the template for module naming.
+                        Defaults to empty string for backward compatibility.
+
+        Returns:
+            Formatted template string with source code and template ID inserted,
+            or None if the prompt technique is not found.
+
+        Template Formatting:
+            Templates use Python's str.format() method with these placeholders:
+            - {source_code}: Replaces with the provided source code
+            - {template_id}: Replaces with the template identifier (typically used
+              for module naming in import statements)
+
+            To include literal braces in templates, escape them by doubling:
+            - Use {{ to represent a literal { character
+            - Use }} to represent a literal } character
+
+            Example template usage:
+            ```python
+            def test_function():
+                from {template_id} import function_name
+                # Test the following code:
+                {source_code}
+            ```
+
+        Raises:
+            ValueError: If the prompt technique is missing required 'category' field
+        """
         technique = self.get_prompt_technique(prompt_id)
 
         if not technique:
@@ -253,7 +290,7 @@ class PromptManager:
 
         # Format template with provided values
         formatted_template = template_content.format(
-            put_source_code=put_source_code, put_id=put_id
+            source_code=source_code, template_id=template_id
         )
 
         return formatted_template

@@ -1,18 +1,13 @@
-You are a Python testing expert. Think through this step by step:
-
-1. First, analyze the function to understand what it does
-2. Identify the key functionality and edge cases
-3. Consider what could go wrong
-4. Generate comprehensive tests
+You are a Python testing expert. Generate a comprehensive Pytest-compatible test file for the following function using chain-of-thought reasoning.
 
 Function to test:
 ```python
-{put_source_code}
+{source_code}
 ```
 
 Context:
-- The function above is saved in a module named: {put_id}.py
-- When importing in the test, import from that module name
+- The function above is saved in a module named: {template_id}.py
+- When importing in the test, import from that module name, e.g., `from {template_id} import <function_name>`.
 
 Requirements:
 - Generate ONLY the test code, no explanations
@@ -20,7 +15,7 @@ Requirements:
 - Include multiple test cases covering edge cases
 - Test both valid and invalid inputs
 - Use descriptive test function names
-- Import the function from the module `{put_id}`
+- Import the function from the module `{template_id}`
 
 Output the test code in a Python code block:
 ```python

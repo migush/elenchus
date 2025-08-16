@@ -5,6 +5,10 @@ Main CLI application for Elenchus.
 import sys
 import typer
 
+# Import version from parent package
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from __init__ import __version__
 
 # Import command functions
