@@ -3,6 +3,7 @@ Prompt Manager for handling prompt techniques and versions.
 """
 
 import os
+import re
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 import yaml
@@ -11,6 +12,9 @@ from .csv_manager import ExperimentCSVManager
 
 class PromptManager:
     """Manages prompt techniques stored in CSV files and loads templates from external files."""
+
+    # Compiled regex pattern for validating template names
+    TEMPLATE_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
 
     def __init__(self, csv_manager: ExperimentCSVManager, prompts_dir: str = "prompts"):
         self.csv_manager = csv_manager
@@ -45,10 +49,23 @@ class PromptManager:
                 "Missing 'prompt_templates' section in prompt configuration"
             )
 
+        if not isinstance(self.prompt_config["prompt_templates"], dict):
+            raise ValueError("'prompt_templates' must be a dictionary")
+
+        if not self.prompt_config["prompt_templates"]:
+            raise ValueError("'prompt_templates' dictionary cannot be empty")
+
         for category, template_info in self.prompt_config["prompt_templates"].items():
+            if not isinstance(template_info, dict):
+                raise ValueError(
+                    f"Template info for category '{category}' must be a dictionary"
+                )
+
             template_file = template_info.get("template_file")
-            if not template_file:
-                raise ValueError(f"Missing template_file for category: {category}")
+            if not template_file or not isinstance(template_file, str):
+                raise ValueError(
+                    f"Missing or invalid template_file for category: {category}"
+                )
 
             template_path = self.template_dir / template_file
             if not template_path.exists():
@@ -211,7 +228,9 @@ class PromptManager:
         }
         self.register_prompt_technique(technique)
 
-    def get_prompt_template(self, prompt_id: str) -> Optional[str]:
+    def get_prompt_template(
+        self, prompt_id: str, put_source_code: str = "", put_id: str = ""
+    ) -> Optional[str]:
         """Get the prompt template for a given prompt ID."""
         technique = self.get_prompt_technique(prompt_id)
 
@@ -232,7 +251,12 @@ class PromptManager:
         # Load template content from file
         template_content = self._load_template_content(template_file)
 
-        return template_content
+        # Format template with provided values
+        formatted_template = template_content.format(
+            put_source_code=put_source_code, put_id=put_id
+        )
+
+        return formatted_template
 
     def get_available_templates(self) -> List[str]:
         """Get list of available template files."""
@@ -245,9 +269,42 @@ class PromptManager:
 
         return sorted(template_files)
 
+    def _validate_template_name(self, template_name: str):
+        """Validate template name to prevent path traversal."""
+        if not template_name or not isinstance(template_name, str):
+            raise ValueError("Template name must be a non-empty string")
+
+        # Check for path separators and parent references
+        if os.path.sep in template_name or ".." in template_name:
+            raise ValueError(
+                "Template name cannot contain path separators or parent references"
+            )
+
+        # Check for safe characters only (letters, numbers, underscores, hyphens)
+        if not self.TEMPLATE_NAME_PATTERN.match(template_name):
+            raise ValueError(
+                "Template name can only contain letters, numbers, underscores, and hyphens"
+            )
+
+    def _get_validated_template_path(self, template_name: str) -> Path:
+        """Get a validated template path after validation and resolution checks."""
+        self._validate_template_name(template_name)
+
+        template_path = self.template_dir / f"{template_name}.txt"
+
+        # Ensure the resolved path is within template_dir
+        try:
+            resolved_path = template_path.resolve()
+            if not resolved_path.is_relative_to(self.template_dir.resolve()):
+                raise ValueError("Template path would be outside template directory")
+        except (RuntimeError, ValueError) as e:
+            raise ValueError(f"Invalid template path: {e}")
+
+        return template_path
+
     def add_custom_template(self, template_name: str, template_content: str):
         """Add a custom template file."""
-        template_path = self.template_dir / f"{template_name}.txt"
+        template_path = self._get_validated_template_path(template_name)
 
         try:
             with open(template_path, "w", encoding="utf-8") as f:
@@ -258,7 +315,7 @@ class PromptManager:
 
     def update_template(self, template_name: str, template_content: str):
         """Update an existing template file."""
-        template_path = self.template_dir / f"{template_name}.txt"
+        template_path = self._get_validated_template_path(template_name)
 
         if not template_path.exists():
             raise FileNotFoundError(f"Template '{template_name}' not found")
@@ -272,7 +329,7 @@ class PromptManager:
 
     def delete_template(self, template_name: str):
         """Delete a template file."""
-        template_path = self.template_dir / f"{template_name}.txt"
+        template_path = self._get_validated_template_path(template_name)
 
         if not template_path.exists():
             raise FileNotFoundError(f"Template '{template_name}' not found")

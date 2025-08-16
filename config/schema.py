@@ -215,8 +215,24 @@ def get_env_mapping() -> Dict[str, str]:
 
 def get_default_config() -> Dict[str, Any]:
     """Get default configuration from schema."""
-    # No more defaults in schema - all values must be provided via config files or environment
-    return {}
+    # Provide comprehensive defaults as the single source of truth
+    return {
+        "human_eval_url": "https://raw.githubusercontent.com/openai/human-eval/master/data/HumanEval.jsonl.gz",
+        "output_dir": "generated_tests",
+        "experiments_dir": "experiments",
+        "max_iterations": 5,
+        "llm_model": "gpt-4",
+        "llm_api_key": None,
+        "llm_temperature": 0.1,
+        "llm_max_tokens": 2000,
+        "llm_provider": "openai",
+        "llm_base_url": None,
+        "llm_timeout": 30,
+        "log_level": "INFO",
+        "log_file": None,
+        "default_prompt_id": "default",
+        "track_experiments": True,
+    }
 
 
 def get_sensitive_fields() -> List[str]:

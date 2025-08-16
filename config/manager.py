@@ -81,23 +81,8 @@ class Config:
 
     def _create_default_config(self) -> Dict:
         """Create a comprehensive default configuration."""
-        return {
-            "human_eval_url": "https://raw.githubusercontent.com/openai/human-eval/master/data/HumanEval.jsonl.gz",
-            "output_dir": "generated_tests",
-            "experiments_dir": "experiments",
-            "max_iterations": 5,
-            "llm_model": "gpt-4",
-            "llm_api_key": None,
-            "llm_temperature": 0.1,
-            "llm_max_tokens": 2000,
-            "llm_provider": "openai",
-            "llm_base_url": None,
-            "llm_timeout": 30,
-            "log_level": "INFO",
-            "log_file": None,
-            "default_prompt_id": "default",
-            "track_experiments": True,
-        }
+        # Use schema.get_default_config() as the single source of truth
+        return get_default_config()
 
     def _save_config(self, config: Dict) -> None:
         """Save configuration to file."""
@@ -202,10 +187,17 @@ class Config:
 
     def get_config_with_priority(self, cli_args: Dict = None) -> Dict:
         """Get configuration with proper priority order: CLI args > env vars > config file > defaults."""
-        # Start with current config (which already has env vars > file > defaults)
-        final_config = self.config.copy()
+        # Start with default config to ensure all required fields are present
+        final_config = get_default_config().copy()
 
-        # Override with CLI arguments if provided
+        # Overlay config file values
+        final_config.update(self.config)
+
+        # Overlay environment variable values
+        if hasattr(self, "env_config") and self.env_config:
+            final_config.update(self.env_config)
+
+        # Overlay CLI arguments if provided
         if cli_args:
             for key, value in cli_args.items():
                 if value is not None:
